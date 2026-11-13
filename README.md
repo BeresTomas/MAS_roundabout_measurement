@@ -6,30 +6,56 @@ Výstupom sú tri CSV súbory pre Excel.
 
 ## Rýchly štart
 
-1. Nainštalujte Python 3.10+ (<https://www.python.org/downloads/>, na Windows zaškrtnite *Add to PATH*).
-2. Stiahnite projekt a nainštalujte jedinú závislosť:
-   ```bash
-   git clone https://github.com/BeresTomas/MAS_roundabout_measurement.git
-   cd MAS_roundabout_measurement
-   pip install pyside6
-   ```
-3. Spustite aplikáciu:
-   ```bash
-   python app.py
-   ```
-4. V dialógu vyberte video, číslo meraného ramena a stlačte **Spustiť**.
-   Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = späť, Ctrl+S = export CSV.
+Funguje na **Windows, Linuxe aj macOS**. Potrebujete iba Python 3.10 alebo novší.
 
-## Inštalácia a spustenie (podrobne)
+### Windows
 
-```bash
-pip install pyside6
-python app.py
+1. Nainštalujte Python z <https://www.python.org/downloads/> a pri inštalácii zaškrtnite
+   **„Add python.exe to PATH“**. (Verzie 3.10–3.13 sú overené; Python zo služby Microsoft Store
+   tiež funguje.)
+2. Stiahnite projekt: na GitHube **Code → Download ZIP** a rozbaľte, alebo
+   `git clone https://github.com/BeresTomas/MAS_roundabout_measurement.git`.
+3. Dvakrát kliknite na **`start.bat`**. Pri prvom spustení si skript sám vytvorí priečinok
+   `.venv` a stiahne PySide6 (cca 150 MB, chvíľu to trvá). Ďalšie spustenia sú okamžité.
+
+Ručne bez skriptu (v príkazovom riadku v priečinku projektu):
+
+```bat
+py -m pip install -r requirements.txt
+py app.py
 ```
 
-Vyžaduje Python 3.10+. Jediná závislosť je PySide6 (prehrávanie cez QtMultimedia –
-na Linuxe potrebuje FFmpeg knižnice, ktoré sú súčasťou balíka PySide6; na Windows/macOS
-sa použijú systémové kodeky alebo FFmpeg z PySide6).
+### Linux / macOS
+
+```bash
+git clone https://github.com/BeresTomas/MAS_roundabout_measurement.git
+cd MAS_roundabout_measurement
+./start.sh
+```
+
+alebo ručne `python3 -m pip install -r requirements.txt` a `python3 app.py`.
+
+### Potom
+
+V dialógu vyberte video, číslo meraného ramena a stlačte **Spustiť**.
+Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = späť, Ctrl+S = export CSV.
+
+## Riešenie problémov
+
+- **„python“ sa nenašiel / otvorí sa Microsoft Store** – Python nie je v PATH. Použite `py`
+  namiesto `python`, alebo preinštalujte Python so zaškrtnutým „Add python.exe to PATH“.
+- **`pip install pyside6` zlyhá** – skontrolujte verziu Pythonu (`py --version`). Pre úplne
+  novú verziu Pythonu nemusí byť PySide6 ešte vydané; nainštalujte Python 3.12 alebo 3.13.
+- **Okno sa otvorí, ale video je čierne alebo sa neprehrá** – chýbajú kodeky prehrávača.
+  Aplikácia na Windows používa FFmpeg zabudovaný v PySide6. Ak nepomôže, skúste druhý
+  backend: v príkazovom riadku `set QT_MEDIA_BACKEND=windows` a potom `py app.py`
+  (na Linuxe `QT_MEDIA_BACKEND=gstreamer python3 app.py`). Pomôže aj prekonvertovať video
+  na H.264 MP4 (napr. v aplikácii HandBrake).
+- **Aplikácia spadne** – zobrazí sa okno s chybou a podrobnosti sa zapíšu do súboru
+  `merac_error.log` vedľa `app.py`. Pošlite ho autorovi. Zaznamenané udalosti sú vždy
+  v autosave súbore vedľa videa, nič sa nestratí.
+- **Klávesy nereagujú** – kliknite do okna aplikácie, aby malo fokus. Skratky fungujú
+  v celom okne, nie je potrebné klikať na video.
 
 ## Nastavenie relácie (dialóg pri štarte)
 

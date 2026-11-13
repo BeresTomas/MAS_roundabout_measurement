@@ -16,11 +16,26 @@ import datetime as dt
 import json
 import os
 import sys
+import traceback
 from dataclasses import dataclass, field
 from typing import Optional
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, QRegularExpression
-from PySide6.QtGui import QAction, QActionGroup, QFont, QKeySequence, QRegularExpressionValidator
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+ERROR_LOG = os.path.join(APP_DIR, "merac_error.log")
+
+if sys.version_info < (3, 10):
+    sys.exit(f"Táto aplikácia potrebuje Python 3.10 alebo novší (máte {sys.version.split()[0]}).\n"
+             "Stiahnite ho z https://www.python.org/downloads/ (na Windows zaškrtnite 'Add to PATH').")
+
+try:
+    from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, QRegularExpression
+    from PySide6.QtGui import (QAction, QActionGroup, QFontDatabase, QKeySequence,
+                               QRegularExpressionValidator)
+except ImportError as _ex:  # pragma: no cover
+    sys.exit("Chýba knižnica PySide6 (alebo sa nedá načítať).\n"
+             "Nainštalujte ju príkazom:   python -m pip install pyside6\n"
+             "(na Windows prípadne:       py -m pip install pyside6)\n"
+             f"Pôvodná chyba: {_ex}")
 from PySide6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -732,7 +747,7 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(self.btn_play)
 
         self.lbl_pos = QLabel("0:00:00.0 / 0:00:00.0")
-        f = QFont("monospace")
+        f = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         f.setPointSize(13)
         f.setBold(True)
         self.lbl_pos.setFont(f)
@@ -872,7 +887,8 @@ class MainWindow(QMainWindow):
                 self.pending_seek = None
                 self.player.pause()
         elif status == QMediaPlayer.MediaStatus.InvalidMedia:
-            self.warn("Video sa nedá prehrať (nepodporovaný formát alebo chýbajúce kodeky).", 15000)
+            self.warn("Video sa nedá prehrať (nepodporovaný formát alebo chýbajúce kodeky) – "
+                      "pozri README, časť Riešenie problémov.", 20000)
 
     def on_player_error(self, error, text):
         if error != QMediaPlayer.Error.NoError:
@@ -1261,7 +1277,31 @@ class MainWindow(QMainWindow):
 
 # --------------------------------------------------------------------------------------
 
+def _log_exception(exc_type, exc, tb):
+    """Neošetrená chyba: zapíše sa do merac_error.log a zobrazí sa v okne (aj bez konzoly)."""
+    text = "".join(traceback.format_exception(exc_type, exc, tb))
+    try:
+        with open(ERROR_LOG, "a", encoding="utf-8") as f:
+            f.write(f"\n===== {dt.datetime.now().isoformat(timespec='seconds')} "
+                    f"Python {sys.version.split()[0]} {sys.platform} =====\n{text}")
+    except OSError:
+        pass
+    sys.__excepthook__(exc_type, exc, tb)
+    try:
+        if QApplication.instance() is not None:
+            QMessageBox.critical(None, "Chyba aplikácie",
+                                 "Nastala neočakávaná chyba. Zaznamenané udalosti sú v autosave súbore.\n\n"
+                                 f"Podrobnosti sú v súbore:\n{ERROR_LOG}\n\n{text[-1500:]}")
+    except Exception:  # noqa: BLE001 – posledná záchrana, nič viac sa nedá urobiť
+        pass
+
+
 def main() -> int:
+    sys.excepthook = _log_exception
+    if sys.platform == "win32":
+        # Na Windows je FFmpeg backend v PySide6 najspoľahlivejší pre H.264 z telefónov;
+        # dá sa prepísať premennou prostredia QT_MEDIA_BACKEND=windows.
+        os.environ.setdefault("QT_MEDIA_BACKEND", "ffmpeg")
     app = QApplication(sys.argv)
     app.setApplicationName("Merač dopravných udalostí")
     dlg = SetupDialog()

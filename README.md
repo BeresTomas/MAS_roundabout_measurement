@@ -71,8 +71,9 @@ Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = sp�
 - **Názvy ramien** – voliteľné pomenovanie ramien 1–4 (napr. ulica alebo smer). Názvy sú
   spoločné pre celé video: pri ďalšej relácii nad tým istým videom sa predvyplnia z autosave.
   Zmeniť sa dajú aj počas práce v menu *Nastavenia → Názvy ramien…*. Zobrazujú sa na paneli
-  a v CSV pribudnú stĺpce `rameno_nazov`, `ciel_rameno_nazov`, `rameno_z_nazov`, `rameno_na_nazov`
-  (číselné stĺpce zostávajú).
+  a v CSV je hneď vedľa každého čísla ramena stĺpec s jeho názvom (`rameno_nazov`,
+  `ciel_rameno_nazov`, `rameno_z_nazov`, `rameno_na_nazov`). Číselné stĺpce zostávajú,
+  lebo sú potrebné na výpočty; názvy sú doplnkové.
 - **Formát CSV** – slovenský Excel (bodkočiarka + desatinná čiarka, predvolené) alebo
   čiarka + desatinná bodka. Dá sa prepnúť aj neskôr v menu *Nastavenia*.
 - **Pokračovať v rozpracovanej relácii** – ak vedľa videa existuje autosave
@@ -142,14 +143,14 @@ na paneli červené počítadlo „VJAZD bez auta vo fronte“ a v exporte má t
 - **Export** (tlačidlo alebo `Ctrl+S`) vytvorí vedľa videa tri CSV súbory:
 
   1. `<video>_rameno<k>_udalosti.csv` –
-     `event_id; typ; cas_video_s; cas_realny; rameno; auto_id; ciel_rameno; poznamka; rameno_nazov; ciel_rameno_nazov`
+     `event_id; typ; cas_video_s; cas_realny; rameno; rameno_nazov; auto_id; ciel_rameno; ciel_rameno_nazov; poznamka`
      (typ: `PRICHOD`, `VJAZD`, `VYLUC_ZACIATOK`, `VYLUC_KONIEC`, `POZNAMKA`, `SMER`)
   2. `<video>_rameno<k>_auta.csv` – jeden riadok = jedno auto:
-     `auto_id; rameno; t_prichod_s; n_pred; t_vjazd_s; cakanie_s; vylucene; interval_od_predch_s; rameno_nazov`
+     `auto_id; rameno; rameno_nazov; t_prichod_s; n_pred; t_vjazd_s; cakanie_s; vylucene; interval_od_predch_s`
      – `cakanie_s` je prázdne, ak auto nevošlo; `interval_od_predch_s` je prázdne pre prvé
      auto a pre autá, kde ono alebo predchodca je vo vylúčenom úseku.
   3. `<video>_rameno<k>_smery.csv` –
-     `interval_od_s; rameno_z; rameno_na; pocet; podiel; rameno_z_nazov; rameno_na_nazov` – riadky „spolu“ a potom
+     `interval_od_s; rameno_z; rameno_z_nazov; rameno_na; rameno_na_nazov; pocet; podiel` – riadky „spolu“ a potom
      rovnaké počty po 15-minútových intervaloch času videa (`interval_od_s` = 0, 900, 1800, …).
 
 - CSV je v UTF-8 s BOM; predvolene bodkočiarka a desatinná čiarka (slovenský Excel sa

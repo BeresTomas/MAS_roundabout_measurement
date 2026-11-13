@@ -392,31 +392,31 @@ class Session:
         p = base + "_udalosti.csv"
         f, w = writer(p)
         with f:
-            w.writerow(["event_id", "typ", "cas_video_s", "cas_realny", "rameno",
-                        "auto_id", "ciel_rameno", "poznamka", "rameno_nazov", "ciel_rameno_nazov"])
+            w.writerow(["event_id", "typ", "cas_video_s", "cas_realny", "rameno", "rameno_nazov",
+                        "auto_id", "ciel_rameno", "ciel_rameno_nazov", "poznamka"])
             for r in st.rows:
                 w.writerow([r["seq"], r["typ"], self._num(r["t"]), self.real_time(r["t"]),
-                            self.rameno,
+                            self.rameno, self.nazov(self.rameno),
                             r["auto_id"] if r["auto_id"] is not None else "",
                             r["ciel_rameno"] if r["ciel_rameno"] is not None else "",
-                            r["poznamka"] or "",
-                            self.nazov(self.rameno), self.nazov(r["ciel_rameno"])])
+                            self.nazov(r["ciel_rameno"]),
+                            r["poznamka"] or ""])
         paths.append(p)
 
         # 2) autá
         p = base + "_auta.csv"
         f, w = writer(p)
         with f:
-            w.writerow(["auto_id", "rameno", "t_prichod_s", "n_pred", "t_vjazd_s",
-                        "cakanie_s", "vylucene", "interval_od_predch_s", "rameno_nazov"])
+            w.writerow(["auto_id", "rameno", "rameno_nazov", "t_prichod_s", "n_pred", "t_vjazd_s",
+                        "cakanie_s", "vylucene", "interval_od_predch_s"])
             prev: Optional[Car] = None
             for c in st.cars:
                 interval = None
                 if prev is not None and not prev.vylucene and not c.vylucene:
                     interval = round_t(c.t_prichod - prev.t_prichod)
-                w.writerow([c.auto_id, self.rameno, self._num(c.t_prichod), c.n_pred,
-                            self._num(c.t_vjazd), self._num(c.cakanie), c.vylucene,
-                            self._num(interval), self.nazov(self.rameno)])
+                w.writerow([c.auto_id, self.rameno, self.nazov(self.rameno), self._num(c.t_prichod),
+                            c.n_pred, self._num(c.t_vjazd), self._num(c.cakanie), c.vylucene,
+                            self._num(interval)])
                 prev = c
         paths.append(p)
 
@@ -424,8 +424,8 @@ class Session:
         p = base + "_smery.csv"
         f, w = writer(p)
         with f:
-            w.writerow(["interval_od_s", "rameno_z", "rameno_na", "pocet", "podiel",
-                        "rameno_z_nazov", "rameno_na_nazov"])
+            w.writerow(["interval_od_s", "rameno_z", "rameno_z_nazov", "rameno_na", "rameno_na_nazov",
+                        "pocet", "podiel"])
             smer_events = [e for e in self.events if e.typ == T_SMER and e.ciel_rameno in (1, 2, 3, 4)]
 
             def block(label, evs):
@@ -433,8 +433,8 @@ class Session:
                 for k in (1, 2, 3, 4):
                     n = sum(1 for e in evs if e.ciel_rameno == k)
                     podiel = (n / total) if total else 0.0
-                    w.writerow([label, self.rameno, k, n, self._num(podiel, 4),
-                                self.nazov(self.rameno), self.nazov(k)])
+                    w.writerow([label, self.rameno, self.nazov(self.rameno), k, self.nazov(k),
+                                n, self._num(podiel, 4)])
 
             block("spolu", smer_events)
             if smer_events:

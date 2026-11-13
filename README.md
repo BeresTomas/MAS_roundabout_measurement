@@ -42,6 +42,10 @@ Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = sp�
 
 ## Riešenie problémov
 
+- **„pip“ sa nenašiel (pip is not recognized)** – nepíšte `pip install …`, ale
+  `py -m pip install -r requirements.txt` (na Linuxe/macOS `python3 -m pip …`).
+  Najjednoduchšie je nepísať nič a spustiť `start.bat`, ktorý inštaláciu spraví sám.
+  Príkazy sa píšu do príkazového riadku (cmd / PowerShell), nie do okna Pythonu s `>>>`.
 - **„python“ sa nenašiel / otvorí sa Microsoft Store** – Python nie je v PATH. Použite `py`
   namiesto `python`, alebo preinštalujte Python so zaškrtnutým „Add python.exe to PATH“.
 - **`pip install pyside6` zlyhá** – skontrolujte verziu Pythonu (`py --version`). Pre úplne

@@ -61,8 +61,9 @@ Jedna relácia = jedno video + jedno rameno.
 | `Shift+←` / `Shift+→` | −5 s / +5 s |
 | `,` / `.` | snímok späť / vpred (podľa fps videa, inak ±0,04 s) |
 | `[` / `]` | rýchlosť 0,25× · 0,5× · 1× · 1,5× · 2× |
+| `↑` / `↓` | hlasitosť +10 % / −10 % |
 
-Medzerník prehrávanie **neovláda**. Pod videom je posuvník, čas videa (0,1 s) a rýchlosť.
+Medzerník prehrávanie **neovláda**. Pod videom je posuvník, čas videa (0,1 s), rýchlosť a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
 
 ## Režim „Časy“ (predvolený)
 

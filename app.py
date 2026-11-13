@@ -651,14 +651,14 @@ class SetupDialog(QDialog):
 
 LEGEND_CASY = (
     "<b>P</b> play/pauza &nbsp;·&nbsp; <b>←/→</b> ±1 s &nbsp;·&nbsp; <b>Shift+←/→</b> ±5 s<br>"
-    "<b>, / .</b> snímok späť/vpred &nbsp;·&nbsp; <b>[ / ]</b> rýchlosť<br>"
+    "<b>, / .</b> snímok späť/vpred &nbsp;·&nbsp; <b>[ / ]</b> rýchlosť &nbsp;·&nbsp; <b>↑/↓</b> hlasitosť<br>"
     "<b>MEDZERNÍK</b> príchod &nbsp;·&nbsp; <b>ENTER</b> vjazd do kruhu<br>"
     "<b>X</b> vylúčený úsek (zač./koniec) &nbsp;·&nbsp; <b>N</b> poznámka<br>"
     "<b>BACKSPACE</b> undo &nbsp;·&nbsp; <b>M</b> režim Smery &nbsp;·&nbsp; <b>Ctrl+S</b> export"
 )
 LEGEND_SMERY = (
     "<b>P</b> play/pauza &nbsp;·&nbsp; <b>←/→</b> ±1 s &nbsp;·&nbsp; <b>Shift+←/→</b> ±5 s<br>"
-    "<b>, / .</b> snímok späť/vpred &nbsp;·&nbsp; <b>[ / ]</b> rýchlosť<br>"
+    "<b>, / .</b> snímok späť/vpred &nbsp;·&nbsp; <b>[ / ]</b> rýchlosť &nbsp;·&nbsp; <b>↑/↓</b> hlasitosť<br>"
     "<b>1 / 2 / 3 / 4</b> auto išlo na výjazd 1–4<br>"
     "<b>BACKSPACE</b> undo &nbsp;·&nbsp; <b>M</b> režim Časy &nbsp;·&nbsp; <b>Ctrl+S</b> export<br>"
     "<i>Medzerník a Enter sú v tomto režime vypnuté.</i>"
@@ -742,6 +742,27 @@ class MainWindow(QMainWindow):
         self.lbl_speed.setFont(f)
         ctrl.addWidget(self.lbl_speed)
         ctrl.addStretch(1)
+
+        self.btn_mute = QPushButton("🔊")
+        self.btn_mute.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_mute.setCheckable(True)
+        self.btn_mute.setToolTip("Stlmiť / zapnúť zvuk")
+        self.btn_mute.setFixedWidth(40)
+        self.btn_mute.toggled.connect(self.set_muted)
+        ctrl.addWidget(self.btn_mute)
+
+        self.sld_volume = QSlider(Qt.Orientation.Horizontal)
+        self.sld_volume.setRange(0, 100)
+        self.sld_volume.setValue(100)
+        self.sld_volume.setFixedWidth(110)
+        self.sld_volume.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.sld_volume.setToolTip("Hlasitosť (↑/↓)")
+        self.sld_volume.valueChanged.connect(self.set_volume)
+        ctrl.addWidget(self.sld_volume)
+
+        self.lbl_volume = QLabel("100 %")
+        self.lbl_volume.setMinimumWidth(48)
+        ctrl.addWidget(self.lbl_volume)
 
         self.btn_export = QPushButton("Export CSV (Ctrl+S)")
         self.btn_export.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -840,6 +861,8 @@ class MainWindow(QMainWindow):
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
+        self.audio.setVolume(self.sld_volume.value() / 100.0)
+        self.audio.setMuted(self.btn_mute.isChecked())
         self.player.setVideoOutput(self.video)
         self.player.durationChanged.connect(self.on_duration)
         self.player.mediaStatusChanged.connect(self.on_media_status)
@@ -906,6 +929,19 @@ class MainWindow(QMainWindow):
         self.speed_idx = max(0, min(len(SPEEDS) - 1, self.speed_idx + delta))
         self.player.setPlaybackRate(SPEEDS[self.speed_idx])
         self.lbl_speed.setText(f"{SPEEDS[self.speed_idx]:g}×")
+
+    def set_volume(self, value: int):
+        self.audio.setVolume(value / 100.0)
+        self.lbl_volume.setText(f"{value} %")
+        if value > 0 and self.btn_mute.isChecked():
+            self.btn_mute.setChecked(False)
+
+    def change_volume(self, delta: int):
+        self.sld_volume.setValue(max(0, min(100, self.sld_volume.value() + delta)))
+
+    def set_muted(self, muted: bool):
+        self.audio.setMuted(muted)
+        self.btn_mute.setText("🔇" if muted else "🔊")
 
     def on_slider_pressed(self):
         self.slider_down = True
@@ -976,6 +1012,12 @@ class MainWindow(QMainWindow):
             return True
         if key == Qt.Key.Key_Right:
             self.seek_rel(5000 if shift else 1000)
+            return True
+        if key == Qt.Key.Key_Up:
+            self.change_volume(+10)
+            return True
+        if key == Qt.Key.Key_Down:
+            self.change_volume(-10)
             return True
         if key == Qt.Key.Key_Comma:
             self.step_frame(-1)

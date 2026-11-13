@@ -4,7 +4,23 @@ Desktopová aplikácia v Pythone (PySide6) na ručné zaznamenávanie dopravnýc
 z videa klávesnicou. Čas udalosti sa berie z aktuálnej pozície videa (presnosť 0,1 s).
 Výstupom sú tri CSV súbory pre Excel.
 
-## Inštalácia a spustenie
+## Rýchly štart
+
+1. Nainštalujte Python 3.10+ (<https://www.python.org/downloads/>, na Windows zaškrtnite *Add to PATH*).
+2. Stiahnite projekt a nainštalujte jedinú závislosť:
+   ```bash
+   git clone https://github.com/BeresTomas/MAS_roundabout_measurement.git
+   cd MAS_roundabout_measurement
+   pip install pyside6
+   ```
+3. Spustite aplikáciu:
+   ```bash
+   python app.py
+   ```
+4. V dialógu vyberte video, číslo meraného ramena a stlačte **Spustiť**.
+   Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = späť, Ctrl+S = export CSV.
+
+## Inštalácia a spustenie (podrobne)
 
 ```bash
 pip install pyside6

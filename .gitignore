@@ -1,0 +1,21 @@
+# virtuálne prostredie a cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# dáta meraní vznikajú vedľa videa, nie v repozitári
+*.mp4
+*.mkv
+*.avi
+*.mov
+*_rameno*.json
+*_rameno*.json.*.bak
+*_udalosti.csv
+*_auta.csv
+*_smery.csv
+
+# editor / OS
+.idea/
+.vscode/
+.DS_Store

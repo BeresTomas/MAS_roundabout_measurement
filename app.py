@@ -1734,8 +1734,10 @@ class MainWindow(QMainWindow):
             items.append((label, c.seq_prichod))
         default = cars[0].seq_prichod if cars else None
         dlg = NoteDialog(self, te, items, default)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            ref, typ, text = dlg.values()
+        accepted = dlg.exec() == QDialog.DialogCode.Accepted
+        ref, typ, text = dlg.values()
+        dlg.deleteLater()
+        if accepted:
             self._check_order(te)
             self.session.add_event(T_POZNAMKA, t, poznamka=text, ref_seq=ref, typ_vozidla=typ, zdroj=z)
             car = self.car_by_seq(ref)
@@ -1793,18 +1795,24 @@ class MainWindow(QMainWindow):
 
     def edit_arm_names(self):
         dlg = ArmNamesDialog(self, self.session.nazvy_ramien)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+        accepted = dlg.exec() == QDialog.DialogCode.Accepted
+        values = dlg.values()
+        dlg.deleteLater()
+        if not accepted:
             return
-        self.session.set_nazvy(dlg.values())
+        self.session.set_nazvy(values)
         self._after_change("Názvy ramien uložené.")
 
     def new_session(self):
         if not self.confirm_unexported():
             return
         dlg = SetupDialog(self, initial=self.session)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+        accepted = dlg.exec() == QDialog.DialogCode.Accepted
+        result = dlg.result_session() if accepted else None
+        dlg.deleteLater()
+        if result is None:
             return
-        self.session, self.pending_seek = dlg.result_session()
+        self.session, self.pending_seek = result
         self.state = self.session.state()
         self.mode = MODE_CASY
         self.selected_seq = None
@@ -1972,6 +1980,21 @@ def _log_exception(exc_type, exc, tb):
         pass
 
 
+def _dispose(*objs):
+    """Zmaže okná, kým ešte žije QApplication.
+
+    Bez toho PySide6 pri ukončení Pythonu maže okná až po QApplication a program
+    spadne (Segmentation fault / Bus error), napr. po zrušení úvodného dialógu.
+    """
+    import shiboken6
+    for o in objs:
+        try:
+            if o is not None and shiboken6.isValid(o):
+                shiboken6.delete(o)
+        except Exception:  # noqa: BLE001 – pri ukončovaní nič iné nerobíme
+            pass
+
+
 def main() -> int:
     sys.excepthook = _log_exception
     if sys.platform == "win32":
@@ -1982,11 +2005,15 @@ def main() -> int:
     app.setApplicationName("Merač dopravných udalostí")
     dlg = SetupDialog()
     if dlg.exec() != QDialog.DialogCode.Accepted:
+        _dispose(dlg)
         return 0
     session, seek = dlg.result_session()
+    _dispose(dlg)
     win = MainWindow(session, seek)
     win.show()
-    return app.exec()
+    rc = app.exec()
+    _dispose(win)
+    return rc
 
 
 if __name__ == "__main__":

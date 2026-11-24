@@ -940,12 +940,12 @@ class SetupDialog(QDialog):
 SEP = " &nbsp;·&nbsp; "
 LEGEND_PLAYER = (
     f"<b>P</b> play/pauza{SEP}<b>←/→</b> ±1 s{SEP}<b>Shift+←/→</b> ±5 s<br>"
-    f"<b>, / .</b> snímok späť/vpred{SEP}<b>[ / ]</b> rýchlosť{SEP}<b>↑/↓</b> hlasitosť<br>"
+    f"<b>, / .</b> snímok späť/vpred{SEP}<b>[ / ]</b> rýchlosť{SEP}<b>Shift+↑/↓</b> hlasitosť<br>"
 )
 LEGEND_CASY = LEGEND_PLAYER + (
     f"<b>MEDZERNÍK</b> príchod (referenčný bod)<br>"
     f"<b>1 / 2 / 3 / 4</b> výjazd na rameno 1–4 (čas + smer)<br>"
-    f"<b>Tab / Shift+Tab</b> odchádza iné auto než ►{SEP}<b>Esc</b> späť na najstaršie<br>"
+    f"<b>↓ / ↑</b> alebo <b>Tab / Shift+Tab</b> odchádza iné auto než ►{SEP}<b>Esc</b> späť na najstaršie<br>"
     f"<b>ENTER</b> vjazd do kruhu (voliteľné){SEP}<b>X</b> vylúčený úsek<br>"
     f"<b>N</b> typ vozidla / poznámka{SEP}<b>BACKSPACE</b> undo<br>"
     f"<b>M</b> režim len Smery{SEP}<b>Ctrl+S</b> export"
@@ -1076,7 +1076,7 @@ class MainWindow(QMainWindow):
         self.sld_volume.setValue(100)
         self.sld_volume.setFixedWidth(110)
         self.sld_volume.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.sld_volume.setToolTip("Hlasitosť (↑/↓)")
+        self.sld_volume.setToolTip("Hlasitosť (Shift+↑ / Shift+↓)")
         self.sld_volume.valueChanged.connect(self.set_volume)
         ctrl.addWidget(self.sld_volume)
 
@@ -1139,7 +1139,7 @@ class MainWindow(QMainWindow):
         self.list_system.setMaximumHeight(190)
         self.list_system.setToolTip("► = auto, ktorému sa priradí ďalší výjazd (1–4); predvolene najstaršie. "
                                     "Ak z kruhu odchádza iné auto (napr. ide na bližší výjazd), "
-                                    "vyberte ho Tab / Shift+Tab alebo kliknutím.")
+                                    "vyberte ho šípkami ↓ / ↑, Tab / Shift+Tab alebo kliknutím.")
         self.list_system.itemClicked.connect(self.on_system_clicked)
         gl.addWidget(self.list_system)
         right.addWidget(self.grp_system)
@@ -1536,11 +1536,18 @@ class MainWindow(QMainWindow):
         if key == Qt.Key.Key_Right:
             self.seek_rel(5000 if shift else 1000)
             return True
+        # ↑ / ↓ = výber auta pre výjazd (ako Shift+Tab / Tab), Shift+↑ / Shift+↓ = hlasitosť
         if key == Qt.Key.Key_Up:
-            self.change_volume(+10)
+            if shift:
+                self.change_volume(+10)
+            else:
+                self.cycle_target(-1)
             return True
         if key == Qt.Key.Key_Down:
-            self.change_volume(-10)
+            if shift:
+                self.change_volume(-10)
+            else:
+                self.cycle_target(+1)
             return True
         if key == Qt.Key.Key_Comma:
             self.step_frame(-1)
@@ -1954,7 +1961,7 @@ class MainWindow(QMainWindow):
                     item.setText(text)
                 if item.data(Qt.ItemDataRole.UserRole) != seq:
                     item.setData(Qt.ItemDataRole.UserRole, seq)
-        title = f"Autá v systéme: {len(cars)}" + ("   (► = ďalší výjazd, Tab = iné auto)" if target else "")
+        title = f"Autá v systéme: {len(cars)}" + ("   (► = ďalší výjazd, ↓/↑ = iné auto)" if target else "")
         if self.grp_system.title() != title:
             self.grp_system.setTitle(title)
 

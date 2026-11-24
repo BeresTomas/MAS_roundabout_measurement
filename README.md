@@ -38,7 +38,7 @@ alebo ručne `python3 -m pip install -r requirements.txt` a `python3 app.py`.
 ### Potom
 
 V dialógu vyberte video 1 (koniec radu), voliteľne video 2 (kruhový objazd), merané rameno
-a stlačte **Spustiť**. Medzerník = príchod, 1–4 = výjazd na rameno 1–4, Tab = iné auto pre výjazd,
+a stlačte **Spustiť**. Medzerník = príchod, 1–4 = výjazd na rameno 1–4, ↓ / ↑ (alebo Tab) = iné auto pre výjazd,
 N = typ vozidla, X = vylúčený úsek, Backspace = späť, Ctrl+S = export CSV.
 
 ## Riešenie problémov
@@ -128,7 +128,7 @@ zaznamenané výjazdy sa opravia samy. Kým video 2 ešte nezačalo alebo už sk
 | `Shift+←` / `Shift+→` | −5 s / +5 s |
 | `,` / `.` | snímok späť / vpred (podľa fps videa 1, inak ±0,04 s) |
 | `[` / `]` | rýchlosť 0,25× · 0,5× · 1× · 1,5× · 2× |
-| `↑` / `↓` | hlasitosť +10 % / −10 % |
+| `Shift+↑` / `Shift+↓` | hlasitosť +10 % / −10 % |
 | `Ctrl+←` / `Ctrl+→` | video 2 o 0,1 s späť / vpred (synchronizácia) |
 | `Ctrl+Shift+←` / `Ctrl+Shift+→` | video 2 o 1 s späť / vpred |
 
@@ -141,7 +141,7 @@ a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
 |---|---|
 | `MEDZERNÍK` | **PRÍCHOD** – auto prešlo referenčným bodom; nové auto s ďalším ID, čas z videa 1 |
 | `1` `2` `3` `4` | **VÝJAZD** – auto prešlo čiarou výjazdu na rameno 1–4; uloží sa čas aj rameno naraz |
-| `Tab` / `Shift+Tab` | z kruhu odchádza iné auto než označené ► – vyberie ďalšie / predchádzajúce |
+| `↓` / `↑` alebo `Tab` / `Shift+Tab` | z kruhu odchádza iné auto než označené ► – vyberie ďalšie / predchádzajúce |
 | `Esc` | zrušiť výber, výjazd dostane opäť najstaršie auto |
 | `N` | **typ vozidla / poznámka** – dodávka, kamión, autobus, motorka, iné; priradí sa k autu |
 | `X` | začiatok / koniec **VYLÚČENÉHO ÚSEKU** (prepínač); autá, ktoré prišli v úseku, majú `vylucene = 1` |
@@ -158,7 +158,7 @@ hneď za ním auto 2 doprava (1. výjazd) – auto 2 zíde z kruhu prvé, kým a
 Na paneli je zoznam *Autá v systéme* (prešli referenčným bodom a ešte neprešli čiarou
 výjazdu). Šípka ► ukazuje auto, ktoré dostane najbližší výjazd – predvolene najstaršie.
 Väčšinou teda stačí stlačiť číslo výjazdu. Keď z kruhu schádza iné auto (v príklade auto 2),
-stlačte najprv `Tab` (alebo naň kliknite) a až potom číslo výjazdu. Po zázname sa výber
+stlačte najprv `↓` alebo `Tab` (prípadne naň kliknite) a až potom číslo výjazdu. Po zázname sa výber
 vráti na najstaršie auto.
 
 **Typ vozidla.** `N` otvorí okno s typom vozidla (stačí stlačiť prvé písmeno: d, k, a, m),

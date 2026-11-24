@@ -37,8 +37,9 @@ alebo ručne `python3 -m pip install -r requirements.txt` a `python3 app.py`.
 
 ### Potom
 
-V dialógu vyberte video, číslo meraného ramena a stlačte **Spustiť**.
-Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = späť, Ctrl+S = export CSV.
+V dialógu vyberte video 1 (koniec radu), voliteľne video 2 (kruhový objazd), merané rameno
+a stlačte **Spustiť**. Medzerník = príchod, 1–4 = výjazd na rameno 1–4, Tab = iné auto pre výjazd,
+N = typ vozidla, X = vylúčený úsek, Backspace = späť, Ctrl+S = export CSV.
 
 ## Riešenie problémov
 
@@ -61,27 +62,62 @@ Medzerník = príchod, Enter = vjazd, M = režim smerov (1–4), Backspace = sp�
 - **Klávesy nereagujú** – kliknite do okna aplikácie, aby malo fokus. Skratky fungujú
   v celom okne, nie je potrebné klikať na video.
 
+## Čo sa meria
+
+Pre každé auto z meraného ramena:
+
+1. **rameno príchodu** – merané rameno relácie (napr. S),
+2. **čas príchodu** – prejazd referenčným bodom (video 1, koniec radu),
+3. **čas výjazdu** – prejazd čiarou výjazdu z kruhu (video 2, kruhový objazd),
+4. **rameno výjazdu** – kam auto išlo (1–4, vrátane otočenia).
+
+Občas: **vylúčené úseky** (keď rad siaha za referenčný bod) a **typ vozidla** pri inom vozidle
+ako osobné auto (dodávka, kamión, autobus, motorka), aby sa dalo pri vyhodnotení vynechať.
+Voliteľne ako poistka: **čas vjazdu do kruhu**.
+
+Všetko sa zaznamenáva v jednom prechode videom.
+
 ## Nastavenie relácie (dialóg pri štarte)
 
-- **Video** – výber súboru.
-- **Merané rameno** – číslo vjazdu 1–4.
+- **Video 1 (príchody)** – video z konca radu, kde je referenčný bod. Jeho čas je hlavná
+  časová os relácie (`cas_video_s` v exporte).
+- **Video 2 (výjazdy)** – voliteľné video kruhového objazdu. Pridať alebo odobrať sa dá aj
+  neskôr v menu *Súbor*.
+- **Video 2 začalo neskôr o** – o koľko sekúnd neskôr bolo spustené video 2 než video 1
+  (záporné = skôr). Stačí približne, presne sa doladí počas prehrávania (pozri nižšie).
+- **Rameno príchodu (merané)** – 1–4. Jedna relácia = jedno merané rameno.
 - **Pozorovateľ** – voliteľné.
-- **Skutočný čas začiatku videa** – voliteľné `HH:MM:SS`; ak je zadaný, v exporte je aj
-  stĺpec `cas_realny`.
-- **Názvy ramien** – voliteľné pomenovanie ramien 1–4 (napr. ulica alebo smer). Názvy sú
-  spoločné pre celé video: pri ďalšej relácii nad tým istým videom sa predvyplnia z autosave.
-  Zmeniť sa dajú aj počas práce v menu *Nastavenia → Názvy ramien…*. Zobrazujú sa na paneli
-  a v CSV je hneď vedľa každého čísla ramena stĺpec s jeho názvom (`rameno_nazov`,
-  `ciel_rameno_nazov`, `rameno_z_nazov`, `rameno_na_nazov`). Číselné stĺpce zostávajú,
-  lebo sú potrebné na výpočty; názvy sú doplnkové.
+- **Skutočný čas začiatku videa 1** – voliteľné `HH:MM:SS`; v exporte potom pribudnú
+  reálne časy (`cas_realny`, `cas_prichodu_realny`, `cas_vyjazdu_realny`).
+- **Názvy ramien** – voliteľné, napr. tlačidlom **Vyplniť S / V / J / Z** (1 = S, 2 = V,
+  3 = J, 4 = Z) alebo názvami ulíc. Sú spoločné pre celé video, pri ďalšej relácii sa
+  predvyplnia. Zmeniť sa dajú aj v menu *Nastavenia → Názvy ramien…*. V CSV je vedľa každého
+  čísla ramena stĺpec s jeho názvom; čísla zostávajú kvôli výpočtom.
 - **Formát CSV** – slovenský Excel (bodkočiarka + desatinná čiarka, predvolené) alebo
   čiarka + desatinná bodka. Dá sa prepnúť aj neskôr v menu *Nastavenia*.
-- **Pokračovať v rozpracovanej relácii** – ak vedľa videa existuje autosave
-  `<video>_rameno<k>.json`, zaškrtávacie pole sa sprístupní (predvolene zapnuté).
-  Po spustení sa video posunie na čas poslednej udalosti.
-  Ak pole odškrtnete, starý autosave sa premenuje na `*.json.<dátum>.bak` a začne sa nová relácia.
+- **Pokračovať v rozpracovanej relácii** – ak vedľa videa 1 existuje autosave
+  `<video>_rameno<k>.json`, pole sa sprístupní (predvolene zapnuté). Načíta sa aj video 2
+  a posun, video sa posunie na čas poslednej udalosti. Ak pole odškrtnete, starý autosave
+  sa premenuje na `*.json.<dátum>.bak` a začne sa nová relácia.
 
-Jedna relácia = jedno video + jedno rameno.
+## Dve videá a synchronizácia
+
+Ak je zadané video 2, obe videá sa zobrazia vedľa seba (*Zobrazenie → Videá vedľa seba /
+pod sebou*, `Ctrl+L`) a ovládajú sa spolu: play/pauza, pretáčanie, snímky aj rýchlosť
+platia pre obe. Zvuk ide len z videa 1.
+
+Video 2 sa drží na pozícii *čas videa 1 − posun*. Postup synchronizácie:
+
+1. Pozastavte (`P`) video 1 v okamihu, ktorý je jednoznačne vidno aj na videu 2
+   (napr. auto, ktoré je v zábere oboch kamier, alebo tlesknutie pri štarte).
+2. Posúvajte len video 2 klávesmi `Ctrl+←` / `Ctrl+→` (o 0,1 s) alebo
+   `Ctrl+Shift+←` / `Ctrl+Shift+→` (o 1 s), prípadne tlačidlami pod videom,
+   kým video 2 neukazuje ten istý okamih. Posun je vidno v poli „video 2 začalo neskôr o“.
+
+Výjazdy a vjazdy sa ukladajú **v čase videa 2** a na os videa 1 sa prepočítavajú posunom.
+Ak teda zistíte, že synchronizácia bola o kúsok vedľa, stačí opraviť posun a všetky už
+zaznamenané výjazdy sa opravia samy. Kým video 2 ešte nezačalo alebo už skončilo, berie sa
+čas z videa 1 (v nadpise videa 2 je „ešte nezačalo“ / „skončilo“).
 
 ## Ovládanie prehrávača
 
@@ -90,68 +126,102 @@ Jedna relácia = jedno video + jedno rameno.
 | `P` | play / pauza |
 | `←` / `→` | −1 s / +1 s |
 | `Shift+←` / `Shift+→` | −5 s / +5 s |
-| `,` / `.` | snímok späť / vpred (podľa fps videa, inak ±0,04 s) |
+| `,` / `.` | snímok späť / vpred (podľa fps videa 1, inak ±0,04 s) |
 | `[` / `]` | rýchlosť 0,25× · 0,5× · 1× · 1,5× · 2× |
 | `↑` / `↓` | hlasitosť +10 % / −10 % |
+| `Ctrl+←` / `Ctrl+→` | video 2 o 0,1 s späť / vpred (synchronizácia) |
+| `Ctrl+Shift+←` / `Ctrl+Shift+→` | video 2 o 1 s späť / vpred |
 
-Medzerník prehrávanie **neovláda**. Pod videom je posuvník, čas videa (0,1 s), rýchlosť a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
+Medzerník prehrávanie **neovláda**. Pod videom je posuvník, čas videa (0,1 s), rýchlosť
+a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
 
-## Režim „Časy“ (predvolený)
+## Režim „Časy + výjazdy“ (predvolený)
 
 | Kláves | Udalosť |
 |---|---|
-| `MEDZERNÍK` | **PRÍCHOD** – nové auto s ďalším ID, zaradí sa na koniec frontu; uloží sa `n_pred` (počet áut vo fronte v tom momente) |
-| `ENTER` | **VJAZD** do kruhu – najstaršie auto vo fronte dostane `t_vjazd`; pri prázdnom fronte sa nič neuloží a zobrazí sa upozornenie |
-| `X` | začiatok / koniec **VYLÚČENÉHO ÚSEKU** (prepínač); počas úseku je nad videom červený pruh; autá, ktoré prišli v úseku, majú `vylucene = 1` |
-| `N` | poznámka s časom |
+| `MEDZERNÍK` | **PRÍCHOD** – auto prešlo referenčným bodom; nové auto s ďalším ID, čas z videa 1 |
+| `1` `2` `3` `4` | **VÝJAZD** – auto prešlo čiarou výjazdu na rameno 1–4; uloží sa čas aj rameno naraz |
+| `Tab` / `Shift+Tab` | vybrať iné auto pre najbližší výjazd (predbiehanie v kruhu) |
+| `Esc` | zrušiť výber, výjazd dostane opäť najstaršie auto |
+| `N` | **typ vozidla / poznámka** – dodávka, kamión, autobus, motorka, iné; priradí sa k autu |
+| `X` | začiatok / koniec **VYLÚČENÉHO ÚSEKU** (prepínač); autá, ktoré prišli v úseku, majú `vylucene = 1` |
+| `ENTER` | **VJAZD** do kruhu – voliteľná poistka; dostane ho najstaršie auto bez vjazdu (FIFO) |
 | `BACKSPACE` | undo poslednej udalosti (opakovateľne) |
-| `M` | prepnutie do režimu Smery |
+| `M` | prepnutie do režimu len Smery |
 | `Ctrl+S` | export CSV |
 
-V režime Časy sú klávesy `1`–`4` vypnuté.
+**Komu sa priradí výjazd.** Na paneli je zoznam *Autá v systéme* (prešli referenčným bodom
+a ešte neprešli čiarou výjazdu). Šípka ► ukazuje auto, ktoré dostane najbližší výjazd –
+predvolene najstaršie. Keď v kruhu auto predbehne iné (napr. auto 2 odbočí na prvom výjazde
+skôr, než auto 1 objde kruh), stlačte `Tab` (alebo kliknite na auto v zozname) a až potom
+číslo výjazdu. Po zázname sa výber vráti na najstaršie auto.
 
-## Režim „Smery“
+**Typ vozidla.** `N` otvorí okno s typom vozidla (stačí stlačiť prvé písmeno: d, k, a, m),
+autom a voliteľnou poznámkou. Predvolené je auto, ktoré naposledy prešlo referenčným bodom,
+takže pri kamióne stačí `MEDZERNÍK`, `N`, `k`, `Enter`. Bez auta sa dá uložiť aj všeobecná
+poznámka (napr. „chodec na priechode“).
 
-| Kláves | Udalosť |
-|---|---|
-| `1` `2` `3` `4` | auto z meraného ramena išlo na výjazd 1 / 2 / 3 / 4 (vrátane otočenia) |
-| `BACKSPACE` | undo |
-| `M` | späť do režimu Časy |
+**Vjazd (Enter)** používajte buď pre všetky autá, alebo vôbec – priraďuje sa v poradí
+príchodu a pri vynechaných vjazdoch by sa posunul na nesprávne auto.
 
-Na paneli sa priebežne zobrazujú počty a percentá pre každý výjazd.
-V režime Smery sú Medzerník a Enter vypnuté.
+## Režim „len Smery“ (klávesa M)
+
+Pôvodný samostatný režim: `1`–`4` zaznamená len smer bez priradenia k autu, Medzerník
+a Enter sú vypnuté. Pri meraní s výjazdmi ho netreba. V `*_smery.csv` sa sčítavajú výjazdy
+z oboch režimov, preto pre to isté video nepoužívajte oba.
 
 ## Ako sa počíta stav
 
-Udalosti sa ukladajú do zoznamu v poradí zaznamenania. Stav (front, ID áut, `n_pred`,
-`cakanie_s`, vylúčené úseky) sa vždy **prepočíta od začiatku zo zoznamu udalostí
-zoradených podľa času videa**. Preto:
+Udalosti sa ukladajú do zoznamu v poradí zaznamenania. Stav (ID áut, výjazdy, `n_pred`,
+časy v systéme, vylúčené úseky) sa vždy **prepočíta od začiatku zo zoznamu udalostí
+zoradených podľa času videa 1**. Preto:
 
 - ak pretočíte video dozadu a zaznamenáte udalosť, zaradí sa správne podľa času
   (zobrazí sa nenápadné varovanie v stavovom riadku);
 - undo iba odstráni poslednú zaznamenanú udalosť a stav sa prepočíta;
-- ID áut zodpovedajú poradiu príchodov podľa času videa.
+- ID áut zodpovedajú poradiu príchodov; výjazd je naviazaný na konkrétny príchod, takže
+  pri dodatočnom vložení príchodu zostane pri správnom aute aj po prečíslovaní.
 
-Ak po pretočení alebo undo zostane VJAZD, pre ktorý vo fronte nie je auto, zobrazí sa
-na paneli červené počítadlo „VJAZD bez auta vo fronte“ a v exporte má taká udalosť prázdne `auto_id`.
+**`n_pred`** = počet áut, ktoré pri príchode daného auta už boli v systéme (prišli skôr
+a ešte neprešli čiarou výjazdu). Ak sa v relácii výjazdy nezaznamenávajú, rozhoduje vjazd.
+
+Nekonzistentné udalosti (napr. výjazd skôr než príchod po zlej synchronizácii) aplikácia
+nezahodí, ale označí: na paneli je červené počítadlo *Chybné udalosti*, v zozname udalostí
+je pri nich ⚠ a v exporte stĺpec `kontrola`.
 
 ## Ukladanie a export
 
-- **Autosave** – po každej udalosti sa celá relácia (nastavenia + udalosti) uloží do
-  `<video>_rameno<k>.json` vedľa videa (atomicky, cez dočasný súbor). Pri páde programu
-  sa nič nestratí; pri ďalšom spustení zvoľte „Pokračovať v rozpracovanej relácii“.
-- **Export** (tlačidlo alebo `Ctrl+S`) vytvorí vedľa videa tri CSV súbory:
+- **Autosave** – po každej udalosti sa celá relácia (nastavenia, video 2, posun, udalosti)
+  uloží do `<video>_rameno<k>.json` vedľa videa 1 (atomicky, cez dočasný súbor). Pri páde
+  programu sa nič nestratí. Staré autosave súbory z predošlej verzie sa načítajú.
+- **Export** (tlačidlo alebo `Ctrl+S`) vytvorí vedľa videa 1 tri CSV súbory:
 
-  1. `<video>_rameno<k>_udalosti.csv` –
-     `event_id; typ; cas_video_s; cas_realny; rameno; rameno_nazov; auto_id; ciel_rameno; ciel_rameno_nazov; poznamka`
-     (typ: `PRICHOD`, `VJAZD`, `VYLUC_ZACIATOK`, `VYLUC_KONIEC`, `POZNAMKA`, `SMER`)
-  2. `<video>_rameno<k>_auta.csv` – jeden riadok = jedno auto:
-     `auto_id; rameno; rameno_nazov; t_prichod_s; n_pred; t_vjazd_s; cakanie_s; vylucene; interval_od_predch_s`
-     – `cakanie_s` je prázdne, ak auto nevošlo; `interval_od_predch_s` je prázdne pre prvé
-     auto a pre autá, kde ono alebo predchodca je vo vylúčenom úseku.
+  1. `<video>_rameno<k>_auta.csv` – **jeden riadok = jedno auto**:
+
+     | stĺpec | význam |
+     |---|---|
+     | `auto_id` | poradové číslo auta podľa príchodu |
+     | `rameno_prichodu`, `rameno_prichodu_nazov` | merané rameno (napr. 1, S) |
+     | `t_prichod_s`, `cas_prichodu_realny` | prejazd referenčným bodom |
+     | `t_vyjazd_s`, `cas_vyjazdu_realny` | prejazd čiarou výjazdu |
+     | `rameno_vyjazdu`, `rameno_vyjazdu_nazov` | kam auto išlo |
+     | `cas_v_systeme_s` | `t_vyjazd − t_prichod` |
+     | `t_vjazd_s`, `cakanie_s` | voliteľný vjazd a `t_vjazd − t_prichod` |
+     | `n_pred` | počet áut v systéme pri príchode |
+     | `vylucene` | 1 = prišlo vo vylúčenom úseku |
+     | `typ_vozidla`, `ine_vozidlo` | napr. kamión; `ine_vozidlo` = 1 pre všetko okrem osobného auta |
+     | `interval_od_predch_s` | `t_prichod − t_prichod` predchádzajúceho; prázdne pre prvé auto a pri vylúčenom úseku |
+     | `poznamka` | poznámky k autu |
+     | `kontrola` | napr. „bez výjazdu“, „vjazd po výjazde“ – prázdne = v poriadku |
+
+     Pri vyhodnotení stačí v Exceli filtrovať `vylucene = 0` a `ine_vozidlo = 0`.
+  2. `<video>_rameno<k>_udalosti.csv` – všetky udalosti:
+     `event_id; typ; cas_video_s; cas_video2_s; zdroj_video; cas_realny; rameno; rameno_nazov;
+     auto_id; ciel_rameno; ciel_rameno_nazov; typ_vozidla; poznamka; kontrola`
+     (typ: `PRICHOD`, `VYJAZD`, `VJAZD`, `VYLUC_ZACIATOK`, `VYLUC_KONIEC`, `POZNAMKA`, `SMER`).
   3. `<video>_rameno<k>_smery.csv` –
-     `interval_od_s; rameno_z; rameno_z_nazov; rameno_na; rameno_na_nazov; pocet; podiel` – riadky „spolu“ a potom
-     rovnaké počty po 15-minútových intervaloch času videa (`interval_od_s` = 0, 900, 1800, …).
+     `interval_od_s; rameno_z; rameno_z_nazov; rameno_na; rameno_na_nazov; pocet; podiel` –
+     riadky „spolu“ a potom po 15-minútových intervaloch času videa 1 (podľa času výjazdu).
 
 - CSV je v UTF-8 s BOM; predvolene bodkočiarka a desatinná čiarka (slovenský Excel sa
   otvorí dvojklikom správne). Alternatíva: čiarka + desatinná bodka.
@@ -161,17 +231,17 @@ na paneli červené počítadlo „VJAZD bez auta vo fronte“ a v exporte má t
 
 ## Overenie logiky bez okna
 
-Logika (triedy `Session`, `compute_state`) nezávisí od GUI. Rýchla kontrola na 5 autách:
+Logika (triedy `Session`, `compute_state`) nezávisí od GUI. Rýchla kontrola na 3 autách,
+z ktorých druhé predbehne prvé:
 
 ```bash
 QT_QPA_PLATFORM=offscreen python -c "
 import app
-s = app.Session('test.mp4', 1)
-for t in (1.0, 2.0, 3.5): s.add_event(app.T_PRICHOD, t)
-s.add_event(app.T_VJAZD, 5.0)
-s.add_event(app.T_PRICHOD, 6.0)
-s.add_event(app.T_VJAZD, 7.0)
-st = s.state()
-for c in st.cars: print(c.auto_id, c.t_prichod, c.n_pred, c.t_vjazd, c.cakanie)
+s = app.Session('test.mp4', 1, nazvy_ramien=app.DEFAULT_ARM_NAMES)
+a = [s.add_event(app.T_PRICHOD, t) for t in (1.0, 2.0, 3.5)]
+s.add_event(app.T_VYJAZD, 8.0, ciel_rameno=2, ref_seq=a[1].seq)
+s.add_event(app.T_VYJAZD, 9.5, ciel_rameno=4, ref_seq=a[0].seq)
+s.add_event(app.T_VYJAZD, 12.0, ciel_rameno=1, ref_seq=a[2].seq)
+for c in s.state().cars: print(c.auto_id, c.t_prichod, c.n_pred, c.t_vyjazd, c.rameno_vyjazdu, c.cas_v_systeme)
 "
 ```

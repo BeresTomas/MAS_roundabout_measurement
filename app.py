@@ -12,7 +12,6 @@ takže sa dá testovať bez okna (viď README).
 from __future__ import annotations
 
 import bisect
-import csv
 import datetime as dt
 import json
 import os
@@ -52,7 +51,6 @@ from PySide6.QtWidgets import (
 # --------------------------------------------------------------------------------------
 
 SPEEDS = [0.25, 0.5, 1.0, 1.5, 2.0]
-INTERVAL_S = 15 * 60          # 15-minútové intervaly pre smery
 DEFAULT_FRAME_MS = 40         # krok po snímkoch, ak nepoznáme fps (0,04 s)
 SYNC_TOLERANCE_MS = 250       # povolený rozchod videa 2 počas prehrávania
 SYNC_COOLDOWN_S = 1.0         # najkratší odstup medzi dvoma dorovnaniami videa 2 počas prehrávania
@@ -523,89 +521,108 @@ class Session:
         s = total - h * 3600 - m * 60
         return f"{h:02d}:{m:02d}:{s:04.1f}".replace(".", CSV_FORMATS[self.csv_format]["decimal"])
 
-    def export_csv(self) -> list:
-        """Vytvorí *_udalosti.csv, *_auta.csv, *_smery.csv vedľa videa 1. Vráti cesty."""
-        fmt = CSV_FORMATS[self.csv_format]
+    EXPORT_COLUMNS = [
+        "zaznam", "auto_id", "rameno_prichodu", "rameno_prichodu_nazov",
+        "t_prichod_s", "cas_prichodu_realny",
+        "t_vyjazd_s", "cas_vyjazdu_realny", "t_vyjazd_video2_s", "rameno_vyjazdu", "rameno_vyjazdu_nazov",
+        "cas_v_systeme_s", "t_vjazd_s", "cakanie_s", "n_pred", "vylucene",
+        "typ_vozidla", "ine_vozidlo", "interval_od_predch_s", "poznamka", "kontrola",
+        "cas_od_s", "cas_do_s", "cas_od_realny", "cas_do_realny",
+    ]
+
+    @property
+    def export_path(self) -> str:
+        return self.export_base + ".csv"
+
+    def export_rows(self) -> list:
+        """Riadky exportu (bez hlavičky): najprv všetky autá podľa príchodu, potom ostatné záznamy.
+
+        zaznam = AUTO            jeden riadok = jedno auto (všetky časy, ramená, typ vozidla, ...)
+                 VYLUCENY_USEK   cas_od_s – cas_do_s
+                 POZNAMKA        všeobecná poznámka bez auta (cas_od_s)
+                 SMER            smer bez auta z režimu len Smery (t_vyjazd_s, rameno_vyjazdu)
+                 CHYBA           udalosť, ktorú sa nepodarilo priradiť (popis v stĺpci kontrola)
+        """
         st = self.state()
-        base = self.export_base
-        paths = []
+        cols = self.EXPORT_COLUMNS
+        out = []
 
-        def writer(path):
-            f = open(path, "w", encoding="utf-8-sig", newline="")
-            return f, csv.writer(f, delimiter=fmt["delimiter"], quoting=csv.QUOTE_MINIMAL)
+        def row(**kw) -> list:
+            r = {c: "" for c in cols}
+            r["rameno_prichodu"] = self.rameno
+            r["rameno_prichodu_nazov"] = self.nazov(self.rameno)
+            for k, v in kw.items():
+                r[k] = "" if v is None else v
+            return [r[c] for c in cols]
 
-        def opt(x):
-            return x if x is not None else ""
+        prev: Optional[Car] = None
+        for c in st.cars:
+            interval = None
+            if prev is not None and not prev.vylucene and not c.vylucene:
+                interval = round_t(c.t_prichod - prev.t_prichod)
+            out.append(row(
+                zaznam="AUTO", auto_id=c.auto_id,
+                t_prichod_s=self._num(c.t_prichod), cas_prichodu_realny=self.real_time(c.t_prichod),
+                t_vyjazd_s=self._num(c.t_vyjazd), cas_vyjazdu_realny=self.real_time(c.t_vyjazd),
+                t_vyjazd_video2_s=self._num(self.video2_time(c.t_vyjazd)) if c.t_vyjazd is not None else "",
+                rameno_vyjazdu=c.rameno_vyjazdu, rameno_vyjazdu_nazov=self.nazov(c.rameno_vyjazdu),
+                cas_v_systeme_s=self._num(c.cas_v_systeme), t_vjazd_s=self._num(c.t_vjazd),
+                cakanie_s=self._num(c.cakanie), n_pred=c.n_pred, vylucene=c.vylucene,
+                typ_vozidla=c.typ_vozidla, ine_vozidlo=c.ine_vozidlo,
+                interval_od_predch_s=self._num(interval), poznamka=" | ".join(c.poznamky),
+                kontrola=", ".join(c.kontrola)))
+            prev = c
 
-        # 1) udalosti
-        p = base + "_udalosti.csv"
-        f, w = writer(p)
-        with f:
-            w.writerow(["event_id", "typ", "cas_video_s", "cas_video2_s", "zdroj_video", "cas_realny",
-                        "rameno", "rameno_nazov", "auto_id", "ciel_rameno", "ciel_rameno_nazov",
-                        "typ_vozidla", "poznamka", "kontrola"])
-            for r in st.rows:
-                w.writerow([r["seq"], r["typ"], self._num(r["t"]), self._num(self.video2_time(r["t"])),
-                            r["zdroj"], self.real_time(r["t"]),
-                            self.rameno, self.nazov(self.rameno),
-                            opt(r["auto_id"]), opt(r["ciel_rameno"]), self.nazov(r["ciel_rameno"]),
-                            r["typ_vozidla"], r["poznamka"] or "", r["chyba"]])
-        paths.append(p)
+        for start, end in st.segments:
+            out.append(row(zaznam="VYLUCENY_USEK", cas_od_s=self._num(start), cas_do_s=self._num(end),
+                           cas_od_realny=self.real_time(start), cas_do_realny=self.real_time(end),
+                           kontrola="" if end is not None else "úsek nie je ukončený (X)"))
 
-        # 2) autá – jeden riadok = jedno auto
-        p = base + "_auta.csv"
-        f, w = writer(p)
-        with f:
-            w.writerow(["auto_id", "rameno_prichodu", "rameno_prichodu_nazov",
-                        "t_prichod_s", "cas_prichodu_realny",
-                        "t_vyjazd_s", "cas_vyjazdu_realny", "rameno_vyjazdu", "rameno_vyjazdu_nazov",
-                        "cas_v_systeme_s", "t_vjazd_s", "cakanie_s", "n_pred", "vylucene",
-                        "typ_vozidla", "ine_vozidlo", "interval_od_predch_s", "poznamka", "kontrola"])
-            prev: Optional[Car] = None
-            for c in st.cars:
-                interval = None
-                if prev is not None and not prev.vylucene and not c.vylucene:
-                    interval = round_t(c.t_prichod - prev.t_prichod)
-                w.writerow([c.auto_id, self.rameno, self.nazov(self.rameno),
-                            self._num(c.t_prichod), self.real_time(c.t_prichod),
-                            self._num(c.t_vyjazd), self.real_time(c.t_vyjazd),
-                            opt(c.rameno_vyjazdu), self.nazov(c.rameno_vyjazdu),
-                            self._num(c.cas_v_systeme), self._num(c.t_vjazd), self._num(c.cakanie),
-                            c.n_pred, c.vylucene, c.typ_vozidla, c.ine_vozidlo,
-                            self._num(interval), " | ".join(c.poznamky), ", ".join(c.kontrola)])
-                prev = c
-        paths.append(p)
+        for r in st.rows:
+            if r["typ"] == T_POZNAMKA and r["auto_id"] is None and not r["chyba"]:
+                out.append(row(zaznam="POZNAMKA", poznamka=r["poznamka"], typ_vozidla=r["typ_vozidla"],
+                               cas_od_s=self._num(r["t"]), cas_od_realny=self.real_time(r["t"])))
+        for r in st.rows:
+            if r["typ"] == T_SMER:
+                out.append(row(zaznam="SMER", t_vyjazd_s=self._num(r["t"]),
+                               cas_vyjazdu_realny=self.real_time(r["t"]),
+                               t_vyjazd_video2_s=self._num(self.video2_time(r["t"])),
+                               rameno_vyjazdu=r["ciel_rameno"], rameno_vyjazdu_nazov=self.nazov(r["ciel_rameno"])))
+        for r in st.rows:
+            if r["chyba"]:
+                out.append(row(zaznam="CHYBA", auto_id=r["auto_id"], rameno_vyjazdu=r["ciel_rameno"],
+                               rameno_vyjazdu_nazov=self.nazov(r["ciel_rameno"]),
+                               typ_vozidla=r["typ_vozidla"], poznamka=r["poznamka"],
+                               kontrola=f"{r['typ']}: {r['chyba']}",
+                               cas_od_s=self._num(r["t"]), cas_od_realny=self.real_time(r["t"])))
+        return out
 
-        # 3) smery – spolu + po 15-minútových intervaloch (výjazdy z režimu Časy aj režim Smery)
-        p = base + "_smery.csv"
-        f, w = writer(p)
-        with f:
-            w.writerow(["interval_od_s", "rameno_z", "rameno_z_nazov", "rameno_na", "rameno_na_nazov",
-                        "pocet", "podiel"])
-            smer = [(r["t"], r["ciel_rameno"]) for r in st.rows
-                    if r["typ"] in (T_VYJAZD, T_SMER) and not r["chyba"] and r["ciel_rameno"] in ARMS]
+    def _csv_line(self, values) -> str:
+        """Riadok CSV. Každé pole s čiarkou, bodkočiarkou alebo úvodzovkou je v úvodzovkách,
+        takže sa stĺpce rozdelia správne aj keď má tabuľkový program ako oddeľovač aj čiarku."""
+        delim = CSV_FORMATS[self.csv_format]["delimiter"]
+        out = []
+        for v in values:
+            s = "" if v is None else str(v)
+            if any(ch in s for ch in ',;"\r\n\t'):
+                s = '"' + s.replace('"', '""') + '"'
+            out.append(s)
+        return delim.join(out)
 
-            def block(label, items):
-                total = len(items)
-                for k in ARMS:
-                    n = sum(1 for _, a in items if a == k)
-                    podiel = (n / total) if total else 0.0
-                    w.writerow([label, self.rameno, self.nazov(self.rameno), k, self.nazov(k),
-                                n, self._num(podiel, 4)])
-
-            block("spolu", smer)
-            if smer:
-                last_start = int(max(t for t, _ in smer) // INTERVAL_S) * INTERVAL_S
-                for start in range(0, last_start + 1, INTERVAL_S):
-                    block(start, [(t, a) for t, a in smer if start <= t < start + INTERVAL_S])
-        paths.append(p)
-
+    def export_csv(self) -> list:
+        """Vytvorí jeden súbor <video>_rameno<k>.csv vedľa videa 1. Vráti [cesta]."""
+        path = self.export_path
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
+            for values in [self.EXPORT_COLUMNS] + self.export_rows():
+                f.write(self._csv_line(values) + "\r\n")
+        os.replace(tmp, path)
         self.exported = True
         try:
             self.save()
         except OSError:
             pass
-        return paths
+        return [path]
 
 
 # --------------------------------------------------------------------------------------
@@ -928,7 +945,7 @@ LEGEND_PLAYER = (
 LEGEND_CASY = LEGEND_PLAYER + (
     f"<b>MEDZERNÍK</b> príchod (referenčný bod)<br>"
     f"<b>1 / 2 / 3 / 4</b> výjazd na rameno 1–4 (čas + smer)<br>"
-    f"<b>Tab / Shift+Tab</b> iné auto pre výjazd{SEP}<b>Esc</b> späť na najstaršie<br>"
+    f"<b>Tab / Shift+Tab</b> odchádza iné auto než ►{SEP}<b>Esc</b> späť na najstaršie<br>"
     f"<b>ENTER</b> vjazd do kruhu (voliteľné){SEP}<b>X</b> vylúčený úsek<br>"
     f"<b>N</b> typ vozidla / poznámka{SEP}<b>BACKSPACE</b> undo<br>"
     f"<b>M</b> režim len Smery{SEP}<b>Ctrl+S</b> export"
@@ -1120,8 +1137,9 @@ class MainWindow(QMainWindow):
         self.list_system = QListWidget()
         self.list_system.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.list_system.setMaximumHeight(190)
-        self.list_system.setToolTip("► = auto, ktorému sa priradí ďalší výjazd (1–4). "
-                                    "Iné auto: Tab / Shift+Tab alebo kliknutie.")
+        self.list_system.setToolTip("► = auto, ktorému sa priradí ďalší výjazd (1–4); predvolene najstaršie. "
+                                    "Ak z kruhu odchádza iné auto (napr. ide na bližší výjazd), "
+                                    "vyberte ho Tab / Shift+Tab alebo kliknutím.")
         self.list_system.itemClicked.connect(self.on_system_clicked)
         gl.addWidget(self.list_system)
         right.addWidget(self.grp_system)
@@ -1757,9 +1775,11 @@ class MainWindow(QMainWindow):
         try:
             paths = self.session.export_csv()
         except OSError as ex:
-            QMessageBox.critical(self, "Export zlyhal", str(ex))
+            QMessageBox.critical(self, "Export zlyhal",
+                                 f"{ex}\n\nAk je súbor otvorený v Exceli alebo LibreOffice, zatvorte ho "
+                                 "a exportujte znova.")
             return False
-        self.info("Exportované: " + ", ".join(os.path.basename(p) for p in paths), 10000)
+        self.info("Exportované do " + ", ".join(os.path.basename(p) for p in paths), 10000)
         self.refresh()
         return True
 

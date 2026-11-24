@@ -141,7 +141,7 @@ a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
 |---|---|
 | `MEDZERNÍK` | **PRÍCHOD** – auto prešlo referenčným bodom; nové auto s ďalším ID, čas z videa 1 |
 | `1` `2` `3` `4` | **VÝJAZD** – auto prešlo čiarou výjazdu na rameno 1–4; uloží sa čas aj rameno naraz |
-| `Tab` / `Shift+Tab` | vybrať iné auto pre najbližší výjazd (predbiehanie v kruhu) |
+| `Tab` / `Shift+Tab` | z kruhu odchádza iné auto než označené ► – vyberie ďalšie / predchádzajúce |
 | `Esc` | zrušiť výber, výjazd dostane opäť najstaršie auto |
 | `N` | **typ vozidla / poznámka** – dodávka, kamión, autobus, motorka, iné; priradí sa k autu |
 | `X` | začiatok / koniec **VYLÚČENÉHO ÚSEKU** (prepínač); autá, ktoré prišli v úseku, majú `vylucene = 1` |
@@ -150,11 +150,16 @@ a vpravo tlačidlo stlmenia 🔊/🔇 s posuvníkom hlasitosti.
 | `M` | prepnutie do režimu len Smery |
 | `Ctrl+S` | export CSV |
 
-**Komu sa priradí výjazd.** Na paneli je zoznam *Autá v systéme* (prešli referenčným bodom
-a ešte neprešli čiarou výjazdu). Šípka ► ukazuje auto, ktoré dostane najbližší výjazd –
-predvolene najstaršie. Keď v kruhu auto predbehne iné (napr. auto 2 odbočí na prvom výjazde
-skôr, než auto 1 objde kruh), stlačte `Tab` (alebo kliknite na auto v zozname) a až potom
-číslo výjazdu. Po zázname sa výber vráti na najstaršie auto.
+**Komu sa priradí výjazd.** Autá sa v kruhu nepredbiehajú, ale z kruhu nemusia odísť
+v tom poradí, v akom prišli. Auto, ktoré ide na bližší výjazd, prejde čiarou výjazdu skôr
+než auto pred ním, ktoré ide ďalej okolo kruhu. Príklad: auto 1 ide doľava (3. výjazd),
+hneď za ním auto 2 doprava (1. výjazd) – auto 2 zíde z kruhu prvé, kým auto 1 ešte krúži.
+
+Na paneli je zoznam *Autá v systéme* (prešli referenčným bodom a ešte neprešli čiarou
+výjazdu). Šípka ► ukazuje auto, ktoré dostane najbližší výjazd – predvolene najstaršie.
+Väčšinou teda stačí stlačiť číslo výjazdu. Keď z kruhu schádza iné auto (v príklade auto 2),
+stlačte najprv `Tab` (alebo naň kliknite) a až potom číslo výjazdu. Po zázname sa výber
+vráti na najstaršie auto.
 
 **Typ vozidla.** `N` otvorí okno s typom vozidla (stačí stlačiť prvé písmeno: d, k, a, m),
 autom a voliteľnou poznámkou. Predvolené je auto, ktoré naposledy prešlo referenčným bodom,
@@ -167,8 +172,8 @@ príchodu a pri vynechaných vjazdoch by sa posunul na nesprávne auto.
 ## Režim „len Smery“ (klávesa M)
 
 Pôvodný samostatný režim: `1`–`4` zaznamená len smer bez priradenia k autu, Medzerník
-a Enter sú vypnuté. Pri meraní s výjazdmi ho netreba. V `*_smery.csv` sa sčítavajú výjazdy
-z oboch režimov, preto pre to isté video nepoužívajte oba.
+a Enter sú vypnuté. Pri meraní s výjazdmi ho netreba. V exporte sú tieto záznamy ako
+riadky `SMER`.
 
 ## Ako sa počíta stav
 
@@ -187,46 +192,52 @@ a ešte neprešli čiarou výjazdu). Ak sa v relácii výjazdy nezaznamenávajú
 
 Nekonzistentné udalosti (napr. výjazd skôr než príchod po zlej synchronizácii) aplikácia
 nezahodí, ale označí: na paneli je červené počítadlo *Chybné udalosti*, v zozname udalostí
-je pri nich ⚠ a v exporte stĺpec `kontrola`.
+je pri nich ⚠ a v exporte sú ako riadky `CHYBA` s popisom v stĺpci `kontrola`.
 
 ## Ukladanie a export
 
 - **Autosave** – po každej udalosti sa celá relácia (nastavenia, video 2, posun, udalosti)
   uloží do `<video>_rameno<k>.json` vedľa videa 1 (atomicky, cez dočasný súbor). Pri páde
   programu sa nič nestratí. Staré autosave súbory z predošlej verzie sa načítajú.
-- **Export** (tlačidlo alebo `Ctrl+S`) vytvorí vedľa videa 1 tri CSV súbory:
+- **Export** (tlačidlo alebo `Ctrl+S`) vytvorí vedľa videa 1 **jeden súbor**
+  `<video>_rameno<k>.csv` so všetkými údajmi. Štatistiky (smery, intervaly, priemery)
+  si z neho spravíte v Exceli sami. Stĺpec `zaznam` hovorí, čo riadok obsahuje:
 
-  1. `<video>_rameno<k>_auta.csv` – **jeden riadok = jedno auto**:
+  | `zaznam` | čo to je | vyplnené stĺpce |
+  |---|---|---|
+  | `AUTO` | jedno auto, všetky autá sú navrchu v poradí príchodu | všetky stĺpce pre auto (tabuľka nižšie) |
+  | `VYLUCENY_USEK` | úsek, keď rad siahal za referenčný bod | `cas_od_s`, `cas_do_s` (+ reálne časy) |
+  | `POZNAMKA` | všeobecná poznámka bez auta | `cas_od_s`, `poznamka` |
+  | `SMER` | smer bez auta z režimu len Smery | `t_vyjazd_s`, `rameno_vyjazdu` |
+  | `CHYBA` | udalosť, ktorú sa nepodarilo priradiť | `cas_od_s`, `kontrola` s popisom |
 
-     | stĺpec | význam |
-     |---|---|
-     | `auto_id` | poradové číslo auta podľa príchodu |
-     | `rameno_prichodu`, `rameno_prichodu_nazov` | merané rameno (napr. 1, S) |
-     | `t_prichod_s`, `cas_prichodu_realny` | prejazd referenčným bodom |
-     | `t_vyjazd_s`, `cas_vyjazdu_realny` | prejazd čiarou výjazdu |
-     | `rameno_vyjazdu`, `rameno_vyjazdu_nazov` | kam auto išlo |
-     | `cas_v_systeme_s` | `t_vyjazd − t_prichod` |
-     | `t_vjazd_s`, `cakanie_s` | voliteľný vjazd a `t_vjazd − t_prichod` |
-     | `n_pred` | počet áut v systéme pri príchode |
-     | `vylucene` | 1 = prišlo vo vylúčenom úseku |
-     | `typ_vozidla`, `ine_vozidlo` | napr. kamión; `ine_vozidlo` = 1 pre všetko okrem osobného auta |
-     | `interval_od_predch_s` | `t_prichod − t_prichod` predchádzajúceho; prázdne pre prvé auto a pri vylúčenom úseku |
-     | `poznamka` | poznámky k autu |
-     | `kontrola` | napr. „bez výjazdu“, „vjazd po výjazde“ – prázdne = v poriadku |
+  Stĺpce pre riadky `AUTO`:
 
-     Pri vyhodnotení stačí v Exceli filtrovať `vylucene = 0` a `ine_vozidlo = 0`.
-  2. `<video>_rameno<k>_udalosti.csv` – všetky udalosti:
-     `event_id; typ; cas_video_s; cas_video2_s; zdroj_video; cas_realny; rameno; rameno_nazov;
-     auto_id; ciel_rameno; ciel_rameno_nazov; typ_vozidla; poznamka; kontrola`
-     (typ: `PRICHOD`, `VYJAZD`, `VJAZD`, `VYLUC_ZACIATOK`, `VYLUC_KONIEC`, `POZNAMKA`, `SMER`).
-  3. `<video>_rameno<k>_smery.csv` –
-     `interval_od_s; rameno_z; rameno_z_nazov; rameno_na; rameno_na_nazov; pocet; podiel` –
-     riadky „spolu“ a potom po 15-minútových intervaloch času videa 1 (podľa času výjazdu).
+  | stĺpec | význam |
+  |---|---|
+  | `auto_id` | poradové číslo auta podľa príchodu |
+  | `rameno_prichodu`, `rameno_prichodu_nazov` | merané rameno (napr. 1, S) |
+  | `t_prichod_s`, `cas_prichodu_realny` | prejazd referenčným bodom (čas videa 1 / reálny čas) |
+  | `t_vyjazd_s`, `cas_vyjazdu_realny` | prejazd čiarou výjazdu (na osi videa 1 / reálny čas) |
+  | `t_vyjazd_video2_s` | ten istý výjazd v čase videa 2 – na dohľadanie vo videu |
+  | `rameno_vyjazdu`, `rameno_vyjazdu_nazov` | kam auto išlo |
+  | `cas_v_systeme_s` | `t_vyjazd − t_prichod` |
+  | `t_vjazd_s`, `cakanie_s` | voliteľný vjazd do kruhu a `t_vjazd − t_prichod` |
+  | `n_pred` | počet áut v systéme pri príchode |
+  | `vylucene` | 1 = prišlo vo vylúčenom úseku |
+  | `typ_vozidla`, `ine_vozidlo` | napr. kamión; `ine_vozidlo` = 1 pre všetko okrem osobného auta |
+  | `interval_od_predch_s` | `t_prichod − t_prichod` predchádzajúceho auta; prázdne pre prvé auto a pri vylúčenom úseku |
+  | `poznamka` | poznámky k autu |
+  | `kontrola` | napr. „bez výjazdu“, „vjazd po výjazde“ – prázdne = v poriadku |
 
+  Pri vyhodnotení stačí v Exceli zapnúť filter a nechať `zaznam = AUTO`, `vylucene = 0`
+  a `ine_vozidlo = 0`. Súbor sa pri každom exporte prepíše aktuálnym stavom; ak je otvorený
+  v Exceli, najprv ho zatvorte.
 - CSV je v UTF-8 s BOM; predvolene bodkočiarka a desatinná čiarka (slovenský Excel sa
   otvorí dvojklikom správne). Alternatíva: čiarka + desatinná bodka.
-  V LibreOffice Calc pri importe nechajte ako oddeľovač iba *Bodkočiarku* (odškrtnite *Čiarku*)
-  a nastavte *Locale* na slovenčinu, inak sa desatinné čiarky rozdelia do ďalších stĺpcov.
+  Každá hodnota s čiarkou je v úvodzovkách, takže sa stĺpce rozdelia správne aj vtedy,
+  keď má LibreOffice pri importe zaškrtnutú čiarku aj bodkočiarku. Aby LibreOffice desatinné
+  čiarky bral ako čísla, nastavte v dialógu importu *Locale* na slovenčinu.
 - Pri zatvorení okna s neexportovanými zmenami aplikácia ponúkne export.
 
 ## Overenie logiky bez okna
